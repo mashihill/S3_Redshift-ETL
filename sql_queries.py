@@ -17,7 +17,7 @@ time_table_drop = "DROP table IF EXISTS time"
 
 
 # CREATE TABLES
-
+## staging table create
 staging_events_table_create= ("""
 CREATE TABLE IF NOT EXISTS staging_events
 (
@@ -38,25 +38,26 @@ CREATE TABLE IF NOT EXISTS staging_events
     status int,
     ts bigint,
     userAgent varchar,
-    userId varchar
+    userId int
 );
 """)
 
 staging_songs_table_create = ("""
 CREATE TABLE IF NOT EXISTS staging_songs 
 (
-   song_id varchar PRIMARY KEY,
-   title varchar,
+   song_id varchar(MAX),
+   title varchar(MAX),
    duration numeric,
    year numeric,
    num_songs numeric,
-   artist_id varchar,
-   artist_name varchar,
+   artist_id varchar(MAX),
+   artist_name varchar(MAX),
    artist_latitude numeric,
    artist_longitude numeric,
-   artist_location varchar
+   artist_location varchar(MAX)
 );
 """)
+
 
 songplay_table_create = ("""
 CREATE TABLE IF NOT EXISTS songplays 
@@ -76,7 +77,7 @@ CREATE TABLE IF NOT EXISTS songplays
 user_table_create = ("""
 CREATE TABLE IF NOT EXISTS users 
 (
-    user_id int PRIMARY KEY, 
+    user_id int, 
     first_name varchar, 
     last_name varchar, 
     gender varchar, 
@@ -109,7 +110,7 @@ CREATE TABLE IF NOT EXISTS artists
 time_table_create = ("""
 CREATE TABLE IF NOT EXISTS time 
 (
-    start_time bigint NOT NULL, 
+    start_time timestamp NOT NULL, 
     hour int, 
     day int, 
     week int, 
@@ -119,16 +120,11 @@ CREATE TABLE IF NOT EXISTS time
 );
 """)
 
-# staging_events_copy = ("""copy staging_events from {} \
-#                       iam_role {} \
-#                       region 'us-west-2' FORMAT AS JSON {};\
-#                       """).
-
 # STAGING TABLES
 
 staging_events_copy = ("""
-copy staging_events from '{}'  
-credentials 'aws_iam_role={}' 
+copy staging_events from {} \
+iam_role {} \
 region 'us-west-2' FORMAT AS JSON {}; 
 """).format(config.get("S3","LOG_DATA"),
             config.get("IAM_ROLE","ARN"),
@@ -136,11 +132,12 @@ region 'us-west-2' FORMAT AS JSON {};
 
 
 staging_songs_copy = ("""
-copy staging_songs from '{}'  
-credentials 'aws_iam_role={}' 
-region 'us-west-2' FORMAT AS JSON 'auto'; 
-""").format(config.get("S3","LOG_DATA"),
+copy staging_songs from {} \
+iam_role {} \
+region 'us-west-2' json 'auto'; 
+""").format(config.get("S3","SONG_DATA"),
             config.get("IAM_ROLE","ARN"))
+
 
 # FINAL TABLES
 songplay_table_insert = ("""
@@ -154,7 +151,19 @@ INSERT INTO songplays
     session_id, 
     location, 
     user_agent
-) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+) 
+SELECT staging_events.ts as start_time, 
+       staging_events.userId as user_id, 
+       staging_events.level as level, 
+       staging_songs.song_id as song_id, 
+       staging_songs.artist_id as artist_id, 
+       staging_events.sessionId as session_id, 
+       staging_songs.artist_location as location, 
+       staging_events.userAgent as user_agent
+FROM staging_events JOIN staging_songs ON 
+   staging_events.song = staging_songs.title AND 
+   staging_events.artist = staging_songs.artist_name
+WHERE staging_events.page = 'NextSong'
 """)
 
 user_table_insert = ("""
@@ -165,10 +174,13 @@ INSERT INTO users
     last_name, 
     gender, 
     level
-) VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (user_id)
-DO UPDATE
-    SET level = EXCLUDED.level;
+) 
+SELECT userId as user_id, 
+       firstName as first_name, 
+       lastName as last_name, 
+       gender, 
+       level
+FROM staging_events
 """)
 
 song_table_insert = ("""
@@ -179,9 +191,13 @@ INSERT INTO songs
     artist_id, 
     year, 
     duration
-) VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (song_id) 
-DO NOTHING;
+)
+SELECT song_id, 
+       title, 
+       artist_id, 
+       year, 
+       duration
+FROM staging_songs
 """)
 
 artist_table_insert = ("""
@@ -192,9 +208,13 @@ INSERT INTO artists
     location, 
     latitude, 
     longitude
-) VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT (artist_id) 
-DO NOTHING;
+)
+SELECT artist_id, 
+       artist_name as name, 
+       artist_location as location, 
+       artist_latitude as latitude, 
+       artist_longitude as longitude
+FROM staging_songs
 """)
 
 time_table_insert = ("""
@@ -207,7 +227,15 @@ INSERT INTO time
     month, 
     year, 
     weekday
-) VALUES (%s, %s, %s, %s, %s, %s, %s)
+) SELECT start_time, 
+   EXTRACT(hr from start_time), 
+   EXTRACT(d from start_time), 
+   EXTRACT(w from start_time), 
+   EXTRACT(mon from start_time), 
+   EXTRACT(yr from start_time), 
+   EXTRACT(weekday from start_time) 
+FROM (SELECT DISTINCT  TIMESTAMP 'epoch' + ts/1000 *INTERVAL '1 second' as start_time
+FROM staging_events)
 """)
 
 # QUERY LISTS
