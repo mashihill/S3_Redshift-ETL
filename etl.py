@@ -4,7 +4,13 @@ from sql_queries import copy_table_queries, insert_table_queries
 
 
 def load_staging_tables(cur, conn):
-    print('Loading staging table')
+    """ 
+    Copy data from S3 to Redshift.
+  
+    Parameters: 
+    cur: db cursor
+    conn: postgre connection   
+    """
     for query in copy_table_queries:
         print('Query: ', query)
         cur.execute(query)
@@ -12,7 +18,13 @@ def load_staging_tables(cur, conn):
 
 
 def insert_tables(cur, conn):
-    print('Inserting tables')
+    """ 
+    Insert table into star schema from Redshift
+  
+    Parameters: 
+    cur: db cursor
+    conn: postgre connection   
+    """
     for query in insert_table_queries:
         print('Query: ', query)
         cur.execute(query)

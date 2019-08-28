@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS staging_events
 );
 """)
 
+
 staging_songs_table_create = ("""
 CREATE TABLE IF NOT EXISTS staging_songs 
 (
