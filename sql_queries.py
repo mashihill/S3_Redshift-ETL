@@ -235,7 +235,7 @@ INSERT INTO time
    EXTRACT(mon from start_time), 
    EXTRACT(yr from start_time), 
    EXTRACT(weekday from start_time) 
-FROM (SELECT DISTINCT  TIMESTAMP 'epoch' + ts/1000 *INTERVAL '1 second' as start_time
+FROM (SELECT DISTINCT TIMESTAMP 'epoch' + ts/1000 *INTERVAL '1 second' as start_time
 FROM staging_events)
 """)
 
