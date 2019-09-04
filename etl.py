@@ -12,7 +12,7 @@ def load_staging_tables(cur, conn):
     conn: postgre connection   
     """
     for query in copy_table_queries:
-        print('Query: ', query)
+        # print('Query: ', query)
         cur.execute(query)
         conn.commit()
 
@@ -26,7 +26,7 @@ def insert_tables(cur, conn):
     conn: postgre connection   
     """
     for query in insert_table_queries:
-        print('Query: ', query)
+        # print('Query: ', query)
         cur.execute(query)
         conn.commit()
 
