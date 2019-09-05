@@ -1,10 +1,10 @@
 ## Introduction
-In this project, we use data residing in S3, in a directory of JSON logs on user activity on app and also metadata in the app.
+In this project, we use data residing in Amazon S3, in a directory of JSON logs on user activity on app and also metadata in the app.
 
-We build an ETL pipeline that extracts their data from S3, stages them in Amazon Redshift, and transforms data into a set of dimensional tables for their analytics team to continue finding insights in what songs their users are listening to. 
+We build an ETL pipeline that extracts their data from S3, stages them in Amazon Redshift service, and transforms data into a set of dimensional tables for further analytics team to continue finding insights in what songs their users are listening to. 
 
 ## How To Run the Program
-- Add your own data warehouse config file `dwh.cfg`
+- Add your own data warehouse config file `dwh.cfg`, be sure to not open to public.
 ```
 > python create_tables.py
 > python etl.py
